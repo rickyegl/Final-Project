@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "baldi-teacher"
+version = "0.1.0"
+description = "Command-line Baldi from Baldi's Basics teacher chatbot powered by Gemini."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "google-generativeai>=0.5.0",
+    "Pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+baldi-teacher = "baldi_teacher.cli:run_cli"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

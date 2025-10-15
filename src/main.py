@@ -1,5 +1,5 @@
-from baldi_teacher import run_cli
+from baldi_teacher.gui import run_gui
 
 
 if __name__ == "__main__":
-    run_cli()
+    run_gui()

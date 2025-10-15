@@ -17,7 +17,8 @@ dependencies = [
 dev = ["pytest"]
 
 [project.scripts]
-baldi-teacher = "baldi_teacher.cli:run_cli"
+baldi-teacher = "baldi_teacher.gui:run_gui"
+baldi-teacher-cli = "baldi_teacher.cli:run_cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

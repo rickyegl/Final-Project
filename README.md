@@ -42,7 +42,8 @@ Type `exit` or `quit` to end the session.
 - Override runtime options via CLI flags (e.g., `--model`, `--history`, `--temperature`).
 - Environment variables prefixed with `BALDI_` also work, for example `BALDI_MODEL`.
 - Supply `--persona` with a text file to customize Baldi's personality for different classrooms.
-- A Baldi image overlay appears in the lower-left corner by default; point at a different asset with `--overlay-image` or disable with `--no-overlay`.
+- A Baldi image overlay appears in the lower-left corner by default, loading from `assets/baldi.webp`; point at a different asset with `--overlay-image` or disable with `--no-overlay`.
+- The GUI swaps to `assets/thinking.png` while Baldi prepares a reply; override with `--thinking-image` for custom reactions.
 - A local `.env` file is read automatically; set `GEMINI_API_KEY` there to avoid exporting variables each session.
 - Resize the overlay with `--overlay-width` / `--overlay-height` (defaults 320px), or pass `0` to leave the image original size.
 - On Windows the overlay background is transparent by default; use `--overlay-opaque` if the effect looks odd or your Tk build lacks support.

@@ -112,8 +112,8 @@ def _parse_args(argv: Optional[Iterable[str]]) -> argparse.Namespace:
     parser.add_argument(
         "--overlay-image",
         type=Path,
-        default=Path("baldi.webp"),
-        help="Path to the Baldi image to pin in the corner (default: ./baldi.webp).",
+        default=Path("assets/baldi.webp"),
+        help="Path to the Baldi image to pin in the corner (default: ./assets/baldi.webp).",
     )
     parser.add_argument(
         "--overlay-width",

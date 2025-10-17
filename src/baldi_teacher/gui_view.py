@@ -194,6 +194,9 @@ class BaldiTeacherView:
         self._avatar_path = avatar_path
         self._thinking_path = thinking_path
         self._avatar_fallback_text = "Baldi\nis\nwatching!"
+        self._title_text_ready = "Baldi is ready to help!\nAsk anything, but write neatly!"
+        self._title_text_thinking = "Baldi is thinking...\nGive him a moment to respond!"
+        self._title_label: Optional[ttk.Label] = None
 
         self._conversation: ScrolledText
         self._input_box: tk.Text
@@ -265,11 +268,12 @@ class BaldiTeacherView:
 
         title_label = ttk.Label(
             header,
-            text="Baldi is ready to help!\nAsk anything, but write neatly!",
+            text=self._title_text_ready,
             style="Heading.TLabel",
             justify="left",
         )
         title_label.pack(side="left", anchor="n")
+        self._title_label = title_label
 
         # Main conversation area
         conversation_frame = ttk.Frame(
@@ -656,7 +660,8 @@ class BaldiTeacherView:
         return combined.filter(ImageFilter.GaussianBlur(radius=18))
 
     def _update_avatar_state(self) -> None:
-        if self._is_pending and self._avatar_image_thinking is not None:
+        thinking_active = self._is_pending and self._avatar_image_thinking is not None
+        if thinking_active:
             self._avatar_label.configure(
                 image=self._avatar_image_thinking,
                 text="",
@@ -684,6 +689,11 @@ class BaldiTeacherView:
                 style="GlassAvatar.TLabel",
                 padding=12,
             )
+        if self._title_label is not None:
+            if thinking_active:
+                self._title_label.configure(text=self._title_text_thinking)
+            else:
+                self._title_label.configure(text=self._title_text_ready)
 
     def _create_photo_image(self, path: Optional[Path]) -> Optional[ImageTk.PhotoImage]:
         if not path:

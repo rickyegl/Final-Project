@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Sequence
 
 from .config import AppConfig
@@ -77,9 +78,29 @@ class GeminiChatClient:
         self._glm = glm
         self._audio_manager = get_audio_manager()
 
-    def generate_reply(self, messages: Sequence[ChatMessage]) -> str:
+    def generate_reply(
+        self,
+        messages: Sequence[ChatMessage],
+        *,
+        attachments: Sequence[Path] = (),
+    ) -> str:
         glm = self._glm
         contents = [message.as_gemini_content() for message in messages]
+        if attachments:
+            attachment_parts, attachment_labels = self._prepare_attachments(attachments)
+            if attachment_parts:
+                if contents and getattr(contents[-1], "role", None) == "user":
+                    target_content = contents[-1]
+                else:
+                    target_content = glm.Content(role="user", parts=[])
+                    contents.append(target_content)
+                existing_parts = list(getattr(target_content, "parts", []))
+                intro_text = "Bookshelf documents attached:\n" + "\n".join(
+                    f"- {label}" for label in attachment_labels
+                )
+                existing_parts.append(glm.Part(text=intro_text))
+                existing_parts.extend(attachment_parts)
+                target_content.parts = existing_parts
         while True:
             response = self._model.generate_content(contents, stream=False)
             if not response or not response.candidates:
@@ -123,3 +144,66 @@ class GeminiChatClient:
             raise RuntimeError(
                 f"Gemini response missing text and tool calls (finish_reason={finish_reason})."
             )
+
+    def _prepare_attachments(
+        self,
+        attachments: Sequence[Path],
+    ) -> tuple[list[object], list[str]]:
+        parts: list[object] = []
+        labels: list[str] = []
+        errors: list[str] = []
+        for entry in attachments:
+            try:
+                part, label = self._build_attachment_part(Path(entry))
+            except Exception as exc:
+                errors.append(f"{entry}: {exc}")
+                continue
+            parts.append(part)
+            labels.append(label)
+        if errors:
+            raise RuntimeError(
+                "Unable to attach bookshelf files:\n" + "\n".join(f"- {msg}" for msg in errors)
+            )
+        return parts, labels
+
+    def _build_attachment_part(
+        self,
+        path: Path,
+    ) -> tuple[object, str]:
+        glm = self._glm
+        if not path.exists():
+            raise FileNotFoundError("File does not exist.")
+        suffix = path.suffix.lower()
+        if suffix not in {".pdf", ".txt"}:
+            raise ValueError(f"Unsupported file type '{path.suffix}'.")
+        try:
+            resolved = path.resolve()
+        except OSError:
+            resolved = path
+
+        if suffix == ".pdf":
+            size = resolved.stat().st_size
+            if size > 20 * 1024 * 1024:
+                raise ValueError("PDF files larger than 20MB cannot be attached inline.")
+            try:
+                data = resolved.read_bytes()
+            except OSError as exc:
+                raise RuntimeError(f"Could not read PDF file: {exc}") from exc
+            part = glm.Part(
+                inline_data=glm.Blob(
+                    mime_type="application/pdf",
+                    data=data,
+                )
+            )
+            label = f"{resolved.name} (PDF)"
+            return part, label
+
+        try:
+            text_content = resolved.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text_content = resolved.read_text(encoding="utf-8", errors="ignore")
+        except OSError as exc:
+            raise RuntimeError(f"Could not read text file: {exc}") from exc
+        part = glm.Part(text=f"[Text document: {resolved.name}]\n{text_content}")
+        label = f"{resolved.name} (Text)"
+        return part, label

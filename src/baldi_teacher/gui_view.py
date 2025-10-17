@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import tkinter as tk
 from pathlib import Path
-from tkinter import font as tkfont
+from tkinter import filedialog, font as tkfont, messagebox
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 from typing import Callable, Optional
@@ -207,6 +207,9 @@ class BaldiTeacherView:
         self._background_label: tk.Label
         self._background_photo: Optional[ImageTk.PhotoImage] = None
         self._last_bg_size: tuple[int, int] = (0, 0)
+        self._bookshelf_files: list[Path] = []
+        self._bookshelf_listbox: Optional[tk.Listbox] = None
+        self._on_bookshelf_change: Optional[Callable[[tuple[Path, ...]], None]] = None
 
         self._build_ui()
         self._root.protocol("WM_DELETE_WINDOW", self._handle_close_event)
@@ -217,6 +220,14 @@ class BaldiTeacherView:
 
     def set_on_close(self, callback: Callable[[], bool | None]) -> None:
         self._on_close = callback
+
+    def set_on_bookshelf_change(
+        self, callback: Callable[[tuple[Path, ...]], None]
+    ) -> None:
+        self._on_bookshelf_change = callback
+
+    def get_bookshelf_files(self) -> tuple[Path, ...]:
+        return tuple(self._bookshelf_files)
 
     def start(self) -> None:
         self._root.mainloop()
@@ -256,24 +267,37 @@ class BaldiTeacherView:
 
         main_pane = ttk.Frame(self._root, style="GlassMain.TFrame", padding=12)
         main_pane.pack(fill="both", expand=True, padx=16, pady=16)
-        main_pane.columnconfigure(0, weight=1)
+        main_pane.columnconfigure(0, weight=3)
+        main_pane.columnconfigure(1, weight=1)
         main_pane.rowconfigure(1, weight=1)
 
         header = ttk.Frame(main_pane, style="GlassMain.TFrame")
-        header.grid(row=0, column=0, sticky="ew")
+        header.grid(row=0, column=0, columnspan=2, sticky="ew")
+        header.columnconfigure(0, weight=1)
 
-        avatar_frame = ttk.Frame(header, style="GlassMain.TFrame")
+        info_header = ttk.Frame(header, style="GlassMain.TFrame")
+        info_header.grid(row=0, column=0, sticky="w")
+
+        avatar_frame = ttk.Frame(info_header, style="GlassMain.TFrame")
         avatar_frame.pack(side="left", anchor="n", padx=(0, 24))
         self._load_avatar(avatar_frame)
 
         title_label = ttk.Label(
-            header,
+            info_header,
             text=self._title_text_ready,
             style="Heading.TLabel",
             justify="left",
         )
         title_label.pack(side="left", anchor="n")
         self._title_label = title_label
+
+        add_books_button = ttk.Button(
+            header,
+            text="Add to Bookshelf",
+            style="GlassAccent.TButton",
+            command=self._handle_add_bookshelf_files,
+        )
+        add_books_button.grid(row=0, column=1, sticky="ne")
 
         # Main conversation area
         conversation_frame = ttk.Frame(
@@ -282,7 +306,7 @@ class BaldiTeacherView:
             padding=8,
         )
         conversation_frame.configure(borderwidth=1, relief="solid")
-        conversation_frame.grid(row=1, column=0, sticky="nsew", pady=(12, 8))
+        conversation_frame.grid(row=1, column=0, sticky="nsew", pady=(12, 8), padx=(0, 12))
 
         self._conversation = ScrolledText(
             conversation_frame,
@@ -295,9 +319,80 @@ class BaldiTeacherView:
         self._conversation.pack(fill="both", expand=True)
         self._theme.configure_text_widget(self._conversation)
 
+        # Bookshelf panel
+        bookshelf_frame = ttk.Frame(
+            main_pane,
+            style="GlassPanel.TFrame",
+            padding=8,
+        )
+        bookshelf_frame.configure(borderwidth=1, relief="solid")
+        bookshelf_frame.grid(row=1, column=1, sticky="ns", pady=(12, 8))
+        bookshelf_frame.columnconfigure(0, weight=1)
+        bookshelf_frame.rowconfigure(1, weight=1)
+
+        bookshelf_label = ttk.Label(
+            bookshelf_frame,
+            text="Bookshelf",
+            style="Heading.TLabel",
+            anchor="center",
+            justify="center",
+        )
+        bookshelf_label.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+
+        list_container = ttk.Frame(bookshelf_frame, style="GlassMain.TFrame")
+        list_container.grid(row=1, column=0, sticky="nsew")
+        list_container.columnconfigure(0, weight=1)
+        list_container.rowconfigure(0, weight=1)
+
+        self._bookshelf_listbox = tk.Listbox(
+            list_container,
+            height=12,
+            selectmode="extended",
+            activestyle="dotbox",
+            borderwidth=0,
+            highlightthickness=0,
+            font=("Segoe UI", 10),
+        )
+        self._bookshelf_listbox.grid(row=0, column=0, sticky="nsew")
+        self._bookshelf_listbox.configure(
+            bg="#ffffff",
+            fg="#1e293b",
+            selectbackground="#bae6fd",
+            selectforeground="#0f172a",
+            highlightbackground="#e2e8f0",
+        )
+        self._bookshelf_listbox.bind("<Delete>", self._on_bookshelf_delete_key)
+
+        list_scroll = ttk.Scrollbar(
+            list_container, orient="vertical", command=self._bookshelf_listbox.yview
+        )
+        list_scroll.grid(row=0, column=1, sticky="ns")
+        self._bookshelf_listbox.configure(yscrollcommand=list_scroll.set)
+
+        bookshelf_controls = ttk.Frame(bookshelf_frame, style="GlassMain.TFrame")
+        bookshelf_controls.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        bookshelf_controls.columnconfigure(0, weight=1)
+        bookshelf_controls.columnconfigure(1, weight=1)
+
+        remove_button = ttk.Button(
+            bookshelf_controls,
+            text="Remove Selected",
+            command=self._remove_selected_bookshelf_files,
+        )
+        remove_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
+
+        clear_button = ttk.Button(
+            bookshelf_controls,
+            text="Clear All",
+            command=self._clear_bookshelf_files,
+        )
+        clear_button.grid(row=0, column=1, sticky="ew", padx=(4, 0))
+
+        self._refresh_bookshelf_list()
+
         # Bottom section for input and controls
         bottom_frame = ttk.Frame(main_pane, style="GlassMain.TFrame")
-        bottom_frame.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        bottom_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         bottom_frame.columnconfigure(0, weight=1)
 
         input_box_container = ttk.Frame(
@@ -366,13 +461,102 @@ class BaldiTeacherView:
             style="Status.TLabel",
             anchor="w",
         )
-        status_bar.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+        status_bar.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(12, 0))
 
         self._root.bind("<Configure>", self._handle_window_resize)
         self._root.update_idletasks()
         self._update_background_image(self._root.winfo_width(), self._root.winfo_height())
 
         self._input_box.focus_set()
+
+    def _handle_add_bookshelf_files(self) -> None:
+        if self._bookshelf_listbox is None:
+            return
+
+        filenames = filedialog.askopenfilenames(
+            parent=self._root,
+            title="Select documents for the bookshelf",
+            filetypes=[
+                ("Supported documents", "*.pdf *.txt"),
+                ("PDF files", "*.pdf"),
+                ("Text files", "*.txt"),
+                ("All files", "*.*"),
+            ],
+        )
+        if not filenames:
+            return
+
+        unsupported: list[str] = []
+        added = False
+        for raw_name in filenames:
+            path = Path(raw_name).expanduser()
+            try:
+                resolved = path.resolve(strict=True)
+            except FileNotFoundError:
+                unsupported.append(f"{path} (not found)")
+                continue
+            suffix = resolved.suffix.lower()
+            if suffix not in {".pdf", ".txt"}:
+                unsupported.append(f"{resolved.name} (unsupported type)")
+                continue
+            if resolved in self._bookshelf_files:
+                continue
+            self._bookshelf_files.append(resolved)
+            added = True
+
+        if added:
+            self._refresh_bookshelf_list()
+            self._notify_bookshelf_change()
+
+        if unsupported:
+            messagebox.showwarning(
+                "Some files were skipped",
+                "The following files could not be added:\n"
+                + "\n".join(f"- {item}" for item in unsupported),
+                parent=self._root,
+            )
+
+    def _remove_selected_bookshelf_files(self) -> None:
+        if self._bookshelf_listbox is None:
+            return
+        selection = list(self._bookshelf_listbox.curselection())
+        if not selection:
+            return
+        for index in sorted(selection, reverse=True):
+            if 0 <= index < len(self._bookshelf_files):
+                del self._bookshelf_files[index]
+        self._refresh_bookshelf_list()
+        self._notify_bookshelf_change()
+
+    def _clear_bookshelf_files(self) -> None:
+        if not self._bookshelf_files:
+            return
+        self._bookshelf_files.clear()
+        self._refresh_bookshelf_list()
+        self._notify_bookshelf_change()
+
+    def _refresh_bookshelf_list(self) -> None:
+        if self._bookshelf_listbox is None:
+            return
+        self._bookshelf_listbox.delete(0, "end")
+        for path in self._bookshelf_files:
+            self._bookshelf_listbox.insert("end", self._format_bookshelf_display(path))
+
+    def _notify_bookshelf_change(self) -> None:
+        if self._on_bookshelf_change is None:
+            return
+        self._on_bookshelf_change(tuple(self._bookshelf_files))
+
+    def _format_bookshelf_display(self, path: Path) -> str:
+        try:
+            display_path = path.resolve()
+        except OSError:
+            display_path = path
+        return f"{display_path.name} ({display_path.parent})"
+
+    def _on_bookshelf_delete_key(self, event: tk.Event) -> str:
+        self._remove_selected_bookshelf_files()
+        return "break"
 
     def _handle_send_event(self) -> None:
         if self._on_send is None:

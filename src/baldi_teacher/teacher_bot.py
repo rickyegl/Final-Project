@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Deque
+from pathlib import Path
+from typing import Deque, Sequence
 
 from .config import AppConfig
 from .gemini_client import GeminiChatClient
@@ -26,9 +27,17 @@ class TeacherBot:
         """Start the conversation with a user prompt."""
         return self.ask(message)
 
-    def ask(self, message: str) -> str:
+    def ask(
+        self,
+        message: str,
+        *,
+        bookshelf_files: Sequence[Path] | None = None,
+    ) -> str:
         self._append_user(message)
-        reply = self._client.generate_reply(tuple(self._history))
+        reply = self._client.generate_reply(
+            tuple(self._history),
+            attachments=tuple(bookshelf_files) if bookshelf_files else (),
+        )
         self._append_model(reply)
         return reply
 

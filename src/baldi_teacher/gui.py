@@ -179,15 +179,16 @@ class BaldiTeacherController:
 
     def _start_async_request(self, text: str) -> None:
         self._set_pending(True)
+        bookshelf_files = self._view.get_bookshelf_files()
         threading.Thread(
             target=self._generate_reply,
-            args=(text,),
+            args=(text, bookshelf_files),
             daemon=True,
         ).start()
 
-    def _generate_reply(self, text: str) -> None:
+    def _generate_reply(self, text: str, bookshelf_files: tuple[Path, ...]) -> None:
         try:
-            reply = self._bot.ask(text)
+            reply = self._bot.ask(text, bookshelf_files=bookshelf_files)
         except Exception as exc:
             self._view.run_on_ui_thread(lambda exc=exc: self._handle_error(exc))
             return

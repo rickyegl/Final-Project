@@ -189,9 +189,9 @@ class BaldiTeacherController:
         try:
             reply = self._bot.ask(text)
         except Exception as exc:
-            self._view.run_on_ui_thread(lambda: self._handle_error(exc))
+            self._view.run_on_ui_thread(lambda exc=exc: self._handle_error(exc))
             return
-        self._view.run_on_ui_thread(lambda: self._handle_reply(reply))
+        self._view.run_on_ui_thread(lambda reply=reply: self._handle_reply(reply))
 
     def _handle_reply(self, reply: str) -> None:
         if self._closing:

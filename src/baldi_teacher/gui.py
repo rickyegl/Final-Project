@@ -11,6 +11,7 @@ from .gemini_client import GeminiChatClient
 from .prompting import BALDI_PERSONA_PROMPT
 from .teacher_bot import TeacherBot
 from .gui_view import BaldiTeacherView
+from .audio import get_audio_manager
 
 
 READY_STATUS = "Ready for the next question."
@@ -137,8 +138,10 @@ class BaldiTeacherController:
         self._intro_question = intro_question
         self._is_pending = False
         self._closing = False
+        self._audio = get_audio_manager()
 
     def run(self) -> None:
+        self._audio.play_event("app_start")
         self._view.set_on_send(self._handle_send)
         self._view.set_on_close(self._handle_close)
         self._view.update_status(READY_STATUS)
@@ -164,6 +167,8 @@ class BaldiTeacherController:
         return True
 
     def _handle_close(self) -> bool:
+        if not self._closing:
+            self._audio.play_event("window_close")
         self._closing = True
         return True
 

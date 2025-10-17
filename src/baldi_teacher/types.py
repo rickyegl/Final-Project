@@ -15,7 +15,9 @@ class ChatMessage:
     text: str
 
     def as_gemini_content(self) -> dict:
-        return {"role": self.role, "parts": [{"text": self.text}]}
+        from google.ai import generativelanguage as glm
+
+        return glm.Content(role=self.role, parts=[glm.Part(text=self.text)])
 
 
 MessageHistory = Sequence[ChatMessage]

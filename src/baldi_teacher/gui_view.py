@@ -8,7 +8,7 @@ from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 from typing import Callable, Optional
 
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageFilter, ImageTk
 
 
 BOLD_PATTERN = re.compile(r"\*\*(.+?)\*\*")
@@ -25,9 +25,59 @@ class BaldiGUITheme:
     def apply(self, root: tk.Misc) -> ttk.Style:
         style = ttk.Style(root)
         style.theme_use("clam")
-        style.configure("Heading.TLabel", font=("Segoe UI", 16, "bold"))
-        style.configure("Status.TLabel", font=("Segoe UI", 10), foreground="#555555")
-        style.configure("TButton", padding=(12, 6))
+
+        # Color scheme
+        glass_surface = "#f8fafc"  # Light background
+        glass_panel = "#ffffff"    # White panel
+        text_primary = "#0f172a"   # Dark text
+        text_muted = "#475569"     # Muted text
+        accent = "#38bdf8"         # Blue accent
+        border_color = "#e2e8f0"   # Light border
+
+        # Configure base styles
+        style.configure(".", background=glass_surface)
+        style.configure("TLabel", background=glass_surface, foreground=text_primary)
+        
+        # Frame styles
+        style.configure("GlassMain.TFrame", background=glass_surface)
+        style.configure("GlassPanel.TFrame", 
+            background=glass_panel,
+            bordercolor=border_color
+        )
+        style.configure("GlassSurface.TFrame", background=glass_panel)
+        style.configure(
+            "Heading.TLabel",
+            font=("Segoe UI", 18, "bold"),
+            foreground=text_primary,
+            background=glass_surface,
+        )
+        style.configure(
+            "Status.TLabel",
+            font=("Segoe UI", 10),
+            foreground=text_muted,
+            background=glass_surface,
+            padding=(6, 4),
+        )
+        style.configure(
+            "GlassAvatar.TLabel",
+            background=glass_surface,
+            foreground=text_primary,
+            font=("Segoe UI", 12, "bold"),
+        )
+        style.configure(
+            "GlassAccent.TButton",
+            font=("Segoe UI", 11, "bold"),
+            padding=(18, 10),
+            borderwidth=0,
+            background=accent,
+            foreground="#f8fafc",
+        )
+        style.map(
+            "GlassAccent.TButton",
+            background=[("active", "#0ea5e9"), ("disabled", "#94a3b8")],
+            foreground=[("disabled", "#e2e8f0")],
+        )
+        style.configure("TButton", padding=(16, 8), borderwidth=0, relief="flat")
         return style
 
     def configure_text_widget(self, widget: ScrolledText) -> None:
@@ -68,13 +118,22 @@ class BaldiGUITheme:
             }
         )
 
-        widget.tag_configure("label_user", foreground="#0b5394", font=bold_font)
-        widget.tag_configure("label_baldi", foreground="#783f04", font=bold_font)
-        widget.tag_configure("label_system", foreground="#20124d", font=bold_font)
+        widget.configure(
+            bg="#f9faff",
+            fg="#0f172a",
+            insertbackground="#0f172a",
+            relief="flat",
+            borderwidth=0,
+            highlightthickness=0,
+        )
 
-        widget.tag_configure("text_user", foreground="#134f5c", font=base_font)
-        widget.tag_configure("text_baldi", foreground="#20124d", font=base_font)
-        widget.tag_configure("text_system", foreground="#4c1130", font=base_font)
+        widget.tag_configure("label_user", foreground="#0ea5e9", font=bold_font)
+        widget.tag_configure("label_baldi", foreground="#a855f7", font=bold_font)
+        widget.tag_configure("label_system", foreground="#ec4899", font=bold_font)
+
+        widget.tag_configure("text_user", foreground="#0f172a", font=base_font)
+        widget.tag_configure("text_baldi", foreground="#1e293b", font=base_font)
+        widget.tag_configure("text_system", foreground="#be123c", font=base_font)
 
         widget.tag_configure("bold", font=bold_font)
         widget.tag_configure("italic", font=italic_font)
@@ -91,17 +150,17 @@ class BaldiGUITheme:
         )
         widget.tag_configure(
             "separator",
-            foreground="#b7b7b7",
+            foreground="#cbd5f5",
             spacing1=6,
             spacing3=6,
         )
 
-        widget.tag_configure("math", font=math_font, foreground="#0b5394")
-        widget.tag_configure("math_bold", font=math_bold_font, foreground="#0b5394")
+        widget.tag_configure("math", font=math_font, foreground="#0284c7")
+        widget.tag_configure("math_bold", font=math_bold_font, foreground="#0284c7")
         widget.tag_configure(
             "math_block",
             font=math_font,
-            foreground="#0b5394",
+            foreground="#0284c7",
             justify="center",
             spacing1=6,
             spacing3=6,
@@ -122,6 +181,8 @@ class BaldiTeacherView:
         self._root = tk.Tk()
         self._root.title("Baldi's Notebook of Knowledge")
         self._root.geometry("960x640")
+        self._root.minsize(640, 480)  # Set minimum window size
+        self._root.configure(bg="#0f172a")
 
         self._style = self._theme.apply(self._root)
 
@@ -140,6 +201,9 @@ class BaldiTeacherView:
         self._avatar_label: ttk.Label
         self._avatar_image_default: Optional[ImageTk.PhotoImage] = None
         self._avatar_image_thinking: Optional[ImageTk.PhotoImage] = None
+        self._background_label: tk.Label
+        self._background_photo: Optional[ImageTk.PhotoImage] = None
+        self._last_bg_size: tuple[int, int] = (0, 0)
 
         self._build_ui()
         self._root.protocol("WM_DELETE_WINDOW", self._handle_close_event)
@@ -183,14 +247,18 @@ class BaldiTeacherView:
 
     # Internal helpers -----------------------------------------------------------
     def _build_ui(self) -> None:
-        main_pane = ttk.Frame(self._root, padding=16)
-        main_pane.pack(fill="both", expand=True)
+        self._background_label = tk.Label(self._root, bd=0)
+        self._background_label.place(x=0, y=0, relwidth=1, relheight=1)
+        self._background_label.lower()
 
-        header = ttk.Frame(main_pane)
+        main_pane = ttk.Frame(self._root, style="GlassMain.TFrame", padding=12)
+        main_pane.pack(fill="both", expand=True, padx=16, pady=16)
+
+        header = ttk.Frame(main_pane, style="GlassMain.TFrame")
         header.pack(fill="x", side="top")
 
-        avatar_frame = ttk.Frame(header)
-        avatar_frame.pack(side="left", anchor="n", padx=(0, 16))
+        avatar_frame = ttk.Frame(header, style="GlassMain.TFrame")
+        avatar_frame.pack(side="left", anchor="n", padx=(0, 24))
         self._load_avatar(avatar_frame)
 
         title_label = ttk.Label(
@@ -201,32 +269,100 @@ class BaldiTeacherView:
         )
         title_label.pack(side="left", anchor="n")
 
-        conversation_frame = ttk.Frame(main_pane)
-        conversation_frame.pack(fill="both", expand=True, pady=(16, 8))
+        # Main conversation area
+        conversation_frame = ttk.Frame(
+            main_pane,
+            style="GlassPanel.TFrame",
+            padding=8,
+        )
+        conversation_frame.configure(borderwidth=1, relief="solid")
+        conversation_frame.pack(fill="both", expand=True, pady=(12, 8))
+        
+        # Ensure conversation frame maintains minimum height
+        conversation_frame.pack_propagate(False)  # Prevent frame from shrinking
+        conversation_frame.configure(height=200)  # Minimum height
 
         self._conversation = ScrolledText(
             conversation_frame,
             wrap="word",
             state="disabled",
             height=20,
-            bg="#fffdf7",
-            bd=0,
-            highlightthickness=0,
-            padx=12,
-            pady=12,
+            padx=8,
+            pady=8,
         )
         self._conversation.pack(fill="both", expand=True)
         self._theme.configure_text_widget(self._conversation)
 
-        input_frame = ttk.Frame(main_pane)
-        input_frame.pack(fill="x", side="bottom")
+        # Bottom section for input and controls
+        bottom_frame = ttk.Frame(main_pane, style="GlassMain.TFrame")
+        bottom_frame.pack(fill="x", side="bottom", pady=(8, 0))
 
-        self._input_box = tk.Text(
+        # Input area
+        input_frame = ttk.Frame(bottom_frame, style="GlassMain.TFrame")
+        input_frame.pack(fill="x", side="top")
+
+        input_box_container = ttk.Frame(
             input_frame,
-            height=3,
-            wrap="word",
+            style="GlassPanel.TFrame",
+            padding=4,
         )
-        self._input_box.pack(fill="x", side="left", expand=True, padx=(0, 12))
+        input_box_container.configure(borderwidth=1, relief="solid")
+        input_box_container.pack(fill="x", expand=True, side="left", padx=(0, 8))
+
+        # Create the input box container with minimum height
+        input_box_container.pack_propagate(False)  # Prevent container from shrinking
+        input_box_container.configure(height=80)  # Set minimum height for container
+
+        # Create the input box with clear styling
+        self._input_box = tk.Text(
+            input_box_container,
+            height=3,
+            minsize=60,  # Minimum height in pixels
+            wrap="word",
+            font=("Segoe UI", 11),
+            bd=0,
+            highlightthickness=1,
+            highlightbackground="#e2e8f0",
+            highlightcolor="#38bdf8",
+        )
+        self._input_box.pack(fill="both", expand=True, padx=2, pady=2)
+        
+        # Ensure minimum height is maintained
+        def maintain_min_height(event):
+            height = self._input_box.winfo_height()
+            if height < 60:  # Minimum height in pixels
+                self._input_box.configure(height=3)  # Reset to 3 lines
+        
+        self._input_box.bind("<Configure>", maintain_min_height)
+        
+        # Configure input box colors and appearance
+        self._input_box.configure(
+            bg="#ffffff",  # Pure white background
+            fg="#1e293b",  # Dark text color
+            insertbackground="#38bdf8",  # Cursor color
+            insertwidth=2,  # Make cursor more visible
+            relief="flat",
+            padx=12,
+            pady=8,
+        )
+        
+        # Add placeholder text with gray color
+        self._input_box.insert("1.0", "Type your message here...")
+        self._input_box.configure(foreground="#94a3b8")
+
+        def on_focus_in(event):
+            if self._input_box.get("1.0", "end-1c").strip() == "Type your message here...":
+                self._input_box.delete("1.0", "end")
+                self._input_box.configure(foreground="#1e293b")
+
+        def on_focus_out(event):
+            if not self._input_box.get("1.0", "end-1c").strip():
+                self._input_box.delete("1.0", "end")
+                self._input_box.insert("1.0", "Type your message here...")
+                self._input_box.configure(foreground="#94a3b8")
+
+        self._input_box.bind("<FocusIn>", on_focus_in)
+        self._input_box.bind("<FocusOut>", on_focus_out)
         self._input_box.bind("<Return>", self._on_return_pressed)
         self._input_box.bind("<Shift-Return>", self._on_shift_return_pressed)
 
@@ -234,6 +370,7 @@ class BaldiTeacherView:
             input_frame,
             text="Send",
             command=self._handle_send_event,
+            style="GlassAccent.TButton",
         )
         self._send_button.pack(side="right")
 
@@ -243,7 +380,11 @@ class BaldiTeacherView:
             style="Status.TLabel",
             anchor="w",
         )
-        status_bar.pack(fill="x", side="bottom", pady=(8, 0))
+        status_bar.pack(fill="x", side="bottom", pady=(12, 0))
+
+        self._root.bind("<Configure>", self._handle_window_resize)
+        self._root.update_idletasks()
+        self._update_background_image(self._root.winfo_width(), self._root.winfo_height())
 
         self._input_box.focus_set()
 
@@ -273,7 +414,12 @@ class BaldiTeacherView:
         self.stop()
 
     def _load_avatar(self, container: ttk.Frame) -> None:
-        self._avatar_label = ttk.Label(container, anchor="center", justify="center")
+        self._avatar_label = ttk.Label(
+            container,
+            anchor="center",
+            justify="center",
+            style="GlassAvatar.TLabel",
+        )
         self._avatar_label.pack()
 
         self._avatar_image_default = self._create_photo_image(self._avatar_path)
@@ -463,34 +609,98 @@ class BaldiTeacherView:
         cleaned = cleaned.replace("{", "").replace("}", "")
         return cleaned
 
+    def _handle_window_resize(self, event: tk.Event) -> None:
+        if event.widget is self._root:
+            self._update_background_image(event.width, event.height)
+
+    def _update_background_image(self, width: int, height: int) -> None:
+        if width <= 0 or height <= 0:
+            return
+        size = (width, height)
+        if size == self._last_bg_size:
+            return
+        self._last_bg_size = size
+        image = self._create_glass_background(width, height)
+        self._background_photo = ImageTk.PhotoImage(image)
+        self._background_label.configure(image=self._background_photo)
+
+    def _create_glass_background(self, width: int, height: int) -> Image.Image:
+        height = max(height, 1)
+        gradient = Image.new("RGB", (1, height))
+        draw = ImageDraw.Draw(gradient)
+        top_color = (15, 23, 42)
+        bottom_color = (30, 64, 175)
+        for y in range(height):
+            factor = y / max(height - 1, 1)
+            color = tuple(
+                int(top + (bottom - top) * factor)
+                for top, bottom in zip(top_color, bottom_color)
+            )
+            draw.point((0, y), fill=color)
+        gradient = gradient.resize((width, height), Image.BILINEAR)
+        gradient = gradient.convert("RGBA")
+
+        overlay = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.ellipse(
+            (
+                -int(width * 0.25),
+                -int(height * 0.35),
+                int(width * 0.75),
+                int(height * 0.45),
+            ),
+            fill=(255, 255, 255, 70),
+        )
+        overlay_draw.rectangle(
+            (
+                int(width * 0.55),
+                int(height * 0.1),
+                int(width * 1.05),
+                int(height * 0.7),
+            ),
+            fill=(93, 232, 249, 55),
+        )
+        overlay_draw.ellipse(
+            (
+                int(width * 0.35),
+                int(height * 0.55),
+                int(width * 1.15),
+                int(height * 1.35),
+            ),
+            fill=(110, 231, 183, 55),
+        )
+
+        combined = Image.alpha_composite(gradient, overlay)
+        return combined.filter(ImageFilter.GaussianBlur(radius=18))
+
     def _update_avatar_state(self) -> None:
         if self._is_pending and self._avatar_image_thinking is not None:
             self._avatar_label.configure(
                 image=self._avatar_image_thinking,
                 text="",
-                style="TLabel",
+                style="GlassAvatar.TLabel",
                 padding=0,
             )
         elif self._avatar_image_default is not None:
             self._avatar_label.configure(
                 image=self._avatar_image_default,
                 text="",
-                style="TLabel",
+                style="GlassAvatar.TLabel",
                 padding=0,
             )
         elif self._avatar_image_thinking is not None:
             self._avatar_label.configure(
                 image=self._avatar_image_thinking,
                 text="",
-                style="TLabel",
+                style="GlassAvatar.TLabel",
                 padding=0,
             )
         else:
             self._avatar_label.configure(
                 image="",
                 text=self._avatar_fallback_text,
-                style="Heading.TLabel",
-                padding=8,
+                style="GlassAvatar.TLabel",
+                padding=12,
             )
 
     def _create_photo_image(self, path: Optional[Path]) -> Optional[ImageTk.PhotoImage]:

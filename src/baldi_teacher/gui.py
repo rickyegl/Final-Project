@@ -15,7 +15,7 @@ from .gui_view import BaldiTeacherView
 
 READY_STATUS = "Ready for the next question."
 WAITING_STATUS = "Baldi is waiting for your question."
-THINKING_STATUS = "Baldi is thinking... Don't forget to show your work!"
+THINKING_STATUS = "Baldi is thinking while he is thinking."
 ERROR_STATUS = "Something went wrong. Try again?"
 
 

@@ -253,9 +253,11 @@ class BaldiTeacherView:
 
         main_pane = ttk.Frame(self._root, style="GlassMain.TFrame", padding=12)
         main_pane.pack(fill="both", expand=True, padx=16, pady=16)
+        main_pane.columnconfigure(0, weight=1)
+        main_pane.rowconfigure(1, weight=1)
 
         header = ttk.Frame(main_pane, style="GlassMain.TFrame")
-        header.pack(fill="x", side="top")
+        header.grid(row=0, column=0, sticky="ew")
 
         avatar_frame = ttk.Frame(header, style="GlassMain.TFrame")
         avatar_frame.pack(side="left", anchor="n", padx=(0, 24))
@@ -276,11 +278,7 @@ class BaldiTeacherView:
             padding=8,
         )
         conversation_frame.configure(borderwidth=1, relief="solid")
-        conversation_frame.pack(fill="both", expand=True, pady=(12, 8))
-        
-        # Ensure conversation frame maintains minimum height
-        conversation_frame.pack_propagate(False)  # Prevent frame from shrinking
-        conversation_frame.configure(height=200)  # Minimum height
+        conversation_frame.grid(row=1, column=0, sticky="nsew", pady=(12, 8))
 
         self._conversation = ScrolledText(
             conversation_frame,
@@ -295,29 +293,21 @@ class BaldiTeacherView:
 
         # Bottom section for input and controls
         bottom_frame = ttk.Frame(main_pane, style="GlassMain.TFrame")
-        bottom_frame.pack(fill="x", side="bottom", pady=(8, 0))
-
-        # Input area
-        input_frame = ttk.Frame(bottom_frame, style="GlassMain.TFrame")
-        input_frame.pack(fill="x", side="top")
+        bottom_frame.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        bottom_frame.columnconfigure(0, weight=1)
 
         input_box_container = ttk.Frame(
-            input_frame,
+            bottom_frame,
             style="GlassPanel.TFrame",
             padding=4,
         )
         input_box_container.configure(borderwidth=1, relief="solid")
-        input_box_container.pack(fill="x", expand=True, side="left", padx=(0, 8))
-
-        # Create the input box container with minimum height
-        input_box_container.pack_propagate(False)  # Prevent container from shrinking
-        input_box_container.configure(height=80)  # Set minimum height for container
+        input_box_container.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
         # Create the input box with clear styling
         self._input_box = tk.Text(
             input_box_container,
             height=3,
-            minsize=60,  # Minimum height in pixels
             wrap="word",
             font=("Segoe UI", 11),
             bd=0,
@@ -326,14 +316,6 @@ class BaldiTeacherView:
             highlightcolor="#38bdf8",
         )
         self._input_box.pack(fill="both", expand=True, padx=2, pady=2)
-        
-        # Ensure minimum height is maintained
-        def maintain_min_height(event):
-            height = self._input_box.winfo_height()
-            if height < 60:  # Minimum height in pixels
-                self._input_box.configure(height=3)  # Reset to 3 lines
-        
-        self._input_box.bind("<Configure>", maintain_min_height)
         
         # Configure input box colors and appearance
         self._input_box.configure(
@@ -367,12 +349,12 @@ class BaldiTeacherView:
         self._input_box.bind("<Shift-Return>", self._on_shift_return_pressed)
 
         self._send_button = ttk.Button(
-            input_frame,
+            bottom_frame,
             text="Send",
             command=self._handle_send_event,
             style="GlassAccent.TButton",
         )
-        self._send_button.pack(side="right")
+        self._send_button.grid(row=0, column=1, sticky="e")
 
         status_bar = ttk.Label(
             main_pane,
@@ -380,7 +362,7 @@ class BaldiTeacherView:
             style="Status.TLabel",
             anchor="w",
         )
-        status_bar.pack(fill="x", side="bottom", pady=(12, 0))
+        status_bar.grid(row=3, column=0, sticky="ew", pady=(12, 0))
 
         self._root.bind("<Configure>", self._handle_window_resize)
         self._root.update_idletasks()

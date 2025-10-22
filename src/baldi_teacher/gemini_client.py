@@ -123,7 +123,7 @@ class GeminiChatClient:
                     result = self._audio_manager.handle_function_call(call.name)
                     contents.append(
                         glm.Content(
-                            role="user",
+                            role="function",
                             parts=[
                                 glm.Part(
                                     function_response=glm.FunctionResponse(

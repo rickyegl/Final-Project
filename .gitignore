@@ -19,5 +19,4 @@ dist/
 .vscode/
 
 # Local environment
-.env
-*.env.local
+

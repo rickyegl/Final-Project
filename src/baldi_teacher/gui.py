@@ -167,9 +167,10 @@ class BaldiTeacherController:
         return True
 
     def _handle_close(self) -> bool:
-        if not self._closing:
-            self._audio.play_event("window_close")
+        if self._closing:
+            return True
         self._closing = True
+        self._audio.play_event("window_close", blocking=True)
         return True
 
     # Conversation orchestration ------------------------------------------------

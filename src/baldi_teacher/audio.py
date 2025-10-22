@@ -33,7 +33,7 @@ class AudioManager:
         self._assets_dir = assets_dir
         self._lock = threading.Lock()
 
-    def play_event(self, sound_key: str) -> dict[str, str]:
+    def play_event(self, sound_key: str, *, blocking: bool = False) -> dict[str, str]:
         """Play a named sound event and return metadata for logging/tool feedback."""
         filename = SOUND_FILES.get(sound_key)
         if filename is None:
@@ -41,7 +41,7 @@ class AudioManager:
                 "status": "error",
                 "reason": f"Unknown sound key '{sound_key}'",
             }
-        return self._play_file(filename)
+        return self._play_file(filename, blocking=blocking)
 
     def handle_function_call(self, function_name: str) -> dict[str, str]:
         """Play the audio mapped from a Gemini function call."""
@@ -53,7 +53,7 @@ class AudioManager:
             }
         return self.play_event(sound_key)
 
-    def _play_file(self, filename: str) -> dict[str, str]:
+    def _play_file(self, filename: str, *, blocking: bool) -> dict[str, str]:
         path = self._assets_dir / filename
         if not path.exists():
             return {
@@ -62,20 +62,22 @@ class AudioManager:
             }
 
         with self._lock:
-            if winsound:  # Windows async playback
-                winsound.PlaySound(
-                    str(path),
-                    winsound.SND_FILENAME | winsound.SND_ASYNC,
-                )
+            if winsound:  # Windows playback (async when requested)
+                flags = winsound.SND_FILENAME
+                if not blocking:
+                    flags |= winsound.SND_ASYNC
+                winsound.PlaySound(str(path), flags)
                 return {
                     "status": "played",
                     "file": filename,
                     "platform": sys.platform,
+                    "blocking": "yes" if blocking else "no",
                 }
             return {
                 "status": "unsupported",
                 "file": filename,
                 "platform": sys.platform,
+                "blocking": "yes" if blocking else "no",
             }
 
 

@@ -23,4 +23,4 @@ This project is an AI tool dedicated to students who lack the access or the abil
 
 
 # Initial Impact
-The impact of this project is for positively affecting students who lack the ability to always be with a teacher in case of lacking one. This making possible the ability to have an accessible AI assistant tool for learning in any subject asked the AI.
+The impact of this project is for positively affecting students who lack the ability to always be with a teacher in case of lacking one. This making possible the ability to have an accessible AI assistant tool for learning in any subject asked the AI in any given moment.

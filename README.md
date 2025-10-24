@@ -1,59 +1,26 @@
-# Baldi Teacher Chatbot
 
-Graphical AI teacher chatbot starring Baldi from *Baldi's Basics*, backed by the Google Gemini API. Built with modular components so you can scale into web services, messaging bots, or classroom tooling.
+# Description
+This project is an AI tool dedicated to students who lack the access or the ability to be with a real life tutor, or such as in cases in which there is no sufficient time for the teacher to help each individual student with their problems. With this AI tool, it is possible to have a conversation with an AI, as well as giving documents for it to read and answer from.
 
-## Features
-- Friendly desktop window with formatted responses (headings, emphasis, bullet points)
-- Baldi persona prompt that blends humor with positive teaching tone
-- Config-driven runtime (model, sampling options, history length)
-- Gemini API client encapsulated for easy reuse or swapping providers
-- GUI sits atop the same modular bot so you can still embed it in other apps or services
 
-## Quick Start
-1. **Install dependencies**
-   ```bash
-   pip install -e .
-   ```
-2. **Set your Gemini API key**
-   ```bash
-   export GEMINI_API_KEY="your-key"
-   ```
-   On Windows PowerShell:
-   ```powershell
-   $env:GEMINI_API_KEY="your-key"
-   ```
-3. **Run the graphical chatbot**
-   ```bash
-   python -m src.main
-   ```
-   or use the console script
-   ```bash
-   baldi-teacher
-   ```
+# How to run the code
+1. Download the repository and extract the contents from the zip file
+2. Go into Visual Studio insiders and click the “Open Folder” option on the right side of the screen
+3. Go into where the extracted file is and double click it
+4. Select the file that is inside the folder, it is called “Final-Project-main”, then click the “Select Folder”.
+5. On the right side of the screen, click the “Final-Project-main”, then click the “src” folder inside of it, and lastly double-click the “main.py” file inside of src.
+6. Inside the file on the top window called “See” search for the “Terminal” option and click it
+7. In the terminal, write “pip install -r requirements.txt”
+8. Run the code of the main.py file
 
-Want the original terminal experience?
-   ```bash
-   baldi-teacher-cli
-   ```
 
-Type `exit` or `quit` to end the session.
+# Implemented Features
+- Added interactive GUI
+- Added google-generativeai library for AI interaction
+- Added Pillow library for image processing 
+- Added sounds
+- Added folder selection inside the GUI
 
-## Configuration
-- Override runtime options via CLI flags (e.g., `--model`, `--history`, `--temperature`).
-- Environment variables prefixed with `BALDI_` also work, for example `BALDI_MODEL`.
-- Supply `--persona` with a text file to customize Baldi's personality for different classrooms.
-- A Baldi image overlay appears in the lower-left corner by default, loading from `assets/baldi.webp`; point at a different asset with `--overlay-image` or disable with `--no-overlay`.
-- The GUI swaps to `assets/thinking.png` while Baldi prepares a reply; override with `--thinking-image` for custom reactions.
-- A local `.env` file is read automatically; set `GEMINI_API_KEY` there to avoid exporting variables each session.
-- Resize the overlay with `--overlay-width` / `--overlay-height` (defaults 320px), or pass `0` to leave the image original size.
-- On Windows the overlay background is transparent by default; use `--overlay-opaque` if the effect looks odd or your Tk build lacks support.
 
-## Scaling the Bot
-- `baldi_teacher/gui.py` hosts the Tkinter experience; repurpose it for whiteboard tools or teaching dashboards.
-- `baldi_teacher/teacher_bot.py` cleanly separates conversation management from transport.
-- `baldi_teacher/gemini_client.py` wraps Google Gemini calls; replace it to target other LLMs.
-- Package entry point (`baldi-teacher`) and `AppConfig` make it straightforward to embed the bot in services, workers, or batch jobs.
-
-## Development
-- Run `pytest` to execute unit tests (none included yet).
-- Contributions should keep persona prompts fun but respectful; Baldi motivates, never intimidates.
+# Initial Impact
+The impact of this project is for positively affecting students who lack the ability to always be with a teacher in case of lacking one. This making possible the ability to have an accessible AI assistant tool for learning in any subject asked the AI.

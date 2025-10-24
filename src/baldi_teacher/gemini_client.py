@@ -92,6 +92,7 @@ class GeminiChatClient:
                 if contents and getattr(contents[-1], "role", None) == "user":
                     target_content = contents[-1]
                 else:
+                    # Ensure attachments live on a user turn so Gemini can attribute them.
                     target_content = glm.Content(role="user", parts=[])
                     contents.append(target_content)
                 existing_parts = list(getattr(target_content, "parts", []))
@@ -101,6 +102,7 @@ class GeminiChatClient:
                 existing_parts.append(glm.Part(text=intro_text))
                 existing_parts.extend(attachment_parts)
                 target_content.parts = existing_parts
+        # Loop until Gemini returns plain text, replaying any required tool calls.
         while True:
             response = self._model.generate_content(contents, stream=False)
             if not response or not response.candidates:
@@ -201,6 +203,7 @@ class GeminiChatClient:
         try:
             text_content = resolved.read_text(encoding="utf-8")
         except UnicodeDecodeError:
+            # Fall back to lossy decoding so partially corrupt files still attach.
             text_content = resolved.read_text(encoding="utf-8", errors="ignore")
         except OSError as exc:
             raise RuntimeError(f"Could not read text file: {exc}") from exc

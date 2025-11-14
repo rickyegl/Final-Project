@@ -13,17 +13,3 @@ This project is an AI tool dedicated to students who lack the access or the abil
 7. In the terminal, write “pip install -r requirements.txt”
 8. Run the code of the main.py file
 
-
-# Implemented Features
-- Added interactive GUI
-- Added google-generativeai library for AI interaction
-- Added Pillow library for image processing 
-- Added sounds
-- Added folder selection inside the GUI
-
-
-# Initial Impact
-The impact of this project is for positively affecting students who lack the ability to always be with a teacher in case of lacking one. This making possible the ability to have an accessible AI assistant tool for learning in any subject asked the AI in any given moment.
-
-# YouTube Video Link
-https://youtu.be/JOyhPMBWWag

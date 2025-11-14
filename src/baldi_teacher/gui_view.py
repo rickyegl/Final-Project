@@ -223,6 +223,7 @@ class BaldiTeacherView:
 
         self._avatar_path = avatar_path
         self._thinking_path = thinking_path
+        self._character_name = "Baldi"  # Default character name
         self._avatar_fallback_text = "Baldi\nis\nwatching!"
         self._title_text_ready = "Baldi is ready to help!\nAsk anything, but write neatly!"
         self._title_text_thinking = "Baldi is thinking...\nGive him a moment to respond!"
@@ -288,13 +289,14 @@ class BaldiTeacherView:
         self._append_message("You", text, "user")
 
     def show_baldi_message(self, text: str) -> None:
-        self._append_message("Baldi", text, "baldi")
+        self._append_message(self._character_name, text, "baldi")
 
     def show_system_message(self, text: str) -> None:
         self._append_message("System", text, "system")
 
     def update_character(self, character_name: str, avatar_path: Path, thinking_path: Optional[Path]) -> None:
         """Update the character avatar and name."""
+        self._character_name = character_name  # Store the character name
         self._avatar_path = avatar_path
         self._thinking_path = thinking_path
 
@@ -349,13 +351,25 @@ class BaldiTeacherView:
         title_label.pack(side="left", anchor="n")
         self._title_label = title_label
 
+        # Button container for right-side buttons
+        button_container = ttk.Frame(header, style="GlassMain.TFrame")
+        button_container.grid(row=0, column=1, sticky="ne")
+
+        change_character_button = ttk.Button(
+            button_container,
+            text="Change Character",
+            style="GlassAccent.TButton",
+            command=self._handle_character_select_click,
+        )
+        change_character_button.pack(side="left", padx=(0, 8))
+
         add_books_button = ttk.Button(
-            header,
+            button_container,
             text="Add to Bookshelf",
             style="GlassAccent.TButton",
             command=self._handle_add_bookshelf_files,
         )
-        add_books_button.grid(row=0, column=1, sticky="ne")
+        add_books_button.pack(side="left")
 
         # Main conversation area with HtmlFrame
         conversation_frame = ttk.Frame(
@@ -571,7 +585,7 @@ class BaldiTeacherView:
             if suffix not in {".pdf", ".txt"}:
                 unsupported.append(f"{resolved.name} (unsupported type)")
                 continue
-            if resolved in self._booksFhelf_files:
+            if resolved in self._bookshelf_files:
                 continue
             self._bookshelf_files.append(resolved)
             added = True
@@ -673,6 +687,11 @@ class BaldiTeacherView:
 
     def _handle_avatar_click(self, event=None) -> None:
         """Handle avatar click to open character selector."""
+        if self._on_character_select:
+            self._on_character_select()
+
+    def _handle_character_select_click(self) -> None:
+        """Handle Change Character button click to open character selector."""
         if self._on_character_select:
             self._on_character_select()
 

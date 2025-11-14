@@ -165,6 +165,13 @@ class BaldiTeacherController:
         self._view.set_on_send(self._handle_send)
         self._view.set_on_close(self._handle_close)
         self._view.set_on_character_select(self._handle_character_select)
+
+        # Initialize view with the current character's name
+        assets_root = Path(__file__).resolve().parents[2] / "assets"
+        avatar_path = assets_root / self._current_character.avatar_path
+        thinking_path = assets_root / self._current_character.thinking_path if self._current_character.thinking_path else None
+        self._view.update_character(self._current_character.name, avatar_path, thinking_path)
+
         self._view.update_status(READY_STATUS)
         self._view.set_pending_state(False)
 

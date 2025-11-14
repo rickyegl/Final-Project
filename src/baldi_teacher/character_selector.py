@@ -30,9 +30,9 @@ class CharacterSelectorDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        # Set dialog size and position
-        dialog_width = 800
-        dialog_height = 600
+        # Set dialog size and position (larger for better visibility)
+        dialog_width = 1000
+        dialog_height = 750
         screen_width = self.dialog.winfo_screenwidth()
         screen_height = self.dialog.winfo_screenheight()
         x = (screen_width - dialog_width) // 2
@@ -69,7 +69,7 @@ class CharacterSelectorDialog:
             fg="#94a3b8",
             bg="#1e293b",
         )
-        subtitle_label.pack(pady=(5, 0))
+        subtitle_label.pack(pady=(1, 0))
 
         # Character grid container
         grid_container = tk.Frame(self.dialog, bg="#1e293b")
@@ -118,9 +118,10 @@ class CharacterSelectorDialog:
             image_path = base_path
 
         try:
-            # Load and resize the image
+            # Load and resize the image (maintain aspect ratio)
             pil_image = Image.open(image_path)
-            pil_image = pil_image.resize((120, 120), Image.Resampling.LANCZOS)
+            # Use thumbnail to maintain aspect ratio and fit within 150x150
+            pil_image.thumbnail((150, 150), Image.Resampling.LANCZOS)
 
             # Convert to PhotoImage
             photo = ImageTk.PhotoImage(pil_image)
@@ -140,7 +141,7 @@ class CharacterSelectorDialog:
             print(f"Warning: Could not load image for {character.name}: {e}")
             icon_label = tk.Label(
                 parent,
-                text=character.name[0],
+                text="",  # <-- Removed character initial
                 font=("Segoe UI", 48, "bold"),
                 fg="#38bdf8",
                 bg="#475569",
@@ -165,17 +166,17 @@ class CharacterSelectorDialog:
         )
 
         # Add rounded corners effect with padding
-        inner_frame = tk.Frame(card, bg=card_bg, padx=20, pady=20)
+        inner_frame = tk.Frame(card, bg=card_bg, padx=30, pady=25)
         inner_frame.pack(expand=True, fill=tk.BOTH)
 
-        # Character image placeholder (large circle or square)
+        # Character image placeholder (larger for better visibility)
         image_container = tk.Frame(
             inner_frame,
             bg="#475569",
-            width=120,
-            height=120,
+            width=150,
+            height=150,
         )
-        image_container.pack(pady=(10, 20))
+        image_container.pack(pady=(15, 25))
         image_container.pack_propagate(False)
 
         # Load and display character thinking image
@@ -183,38 +184,27 @@ class CharacterSelectorDialog:
             image_container, character, card_bg
         )
 
-        # Character name
-        name_label = tk.Label(
-            inner_frame,
-            text=character.name,
-            font=("Segoe UI", 18, "bold"),
-            fg="#f8fafc",
-            bg=card_bg,
-        )
-        name_label.pack(pady=(0, 10))
-
-        # Character description
-        desc_label = tk.Label(
-            inner_frame,
-            text=character.description,
-            font=("Segoe UI", 11),
-            fg="#cbd5e1",
-            bg=card_bg,
-            wraplength=250,
-            justify=tk.CENTER,
-        )
-        desc_label.pack()
+        # # Character name (more prominent)
+        # name_label = tk.Label(
+        #     inner_frame,
+        #     text=character.name,
+        #     font=("Segoe UI", 9, "bold"),
+        #     fg="#f8fafc",
+        #     bg=card_bg,
+        # )
+        # name_label.pack(pady=(0, 3))
 
         # Current selection indicator
-        if character.id == self.current_character_id:
-            indicator = tk.Label(
-                inner_frame,
-                text="✓ Current",
-                font=("Segoe UI", 10, "bold"),
-                fg="#22c55e",
-                bg=card_bg,
-            )
-            indicator.pack(pady=(15, 0))
+        indicator = None
+        # if character.id == self.current_character_id:
+        #     indicator = tk.Label(
+        #         inner_frame,
+        #         text="✓ Currently Selected",
+        #         font=("Segoe UI", 11, "bold"),
+        #         fg="#22c55e",
+        #         bg=card_bg,
+        #     )
+        #     indicator.pack(pady=(10, 0))
 
         # Bind click events to all widgets in the card
         def on_card_click(event=None):
@@ -223,17 +213,23 @@ class CharacterSelectorDialog:
         def on_enter(event):
             card.configure(bg=card_hover_bg)
             inner_frame.configure(bg=card_hover_bg)
-            name_label.configure(bg=card_hover_bg)
-            desc_label.configure(bg=card_hover_bg)
+            # name_label.configure(bg=card_hover_bg)
+            # if indicator:
+            #     indicator.configure(bg=card_hover_bg)
 
         def on_leave(event):
             card.configure(bg=card_bg)
             inner_frame.configure(bg=card_bg)
-            name_label.configure(bg=card_bg)
-            desc_label.configure(bg=card_bg)
+            # name_label.configure(bg=card_bg)
+            # if indicator:
+            #     indicator.configure(bg=card_bg)
 
         # Bind events to all elements for better UX
-        for widget in [card, inner_frame, image_container, icon_label, name_label, desc_label]:
+        widgets_to_bind = [card, inner_frame, image_container, icon_label]
+        # if indicator:
+        #     widgets_to_bind.append(indicator)
+
+        for widget in widgets_to_bind:
             widget.bind("<Button-1>", on_card_click)
             widget.bind("<Enter>", on_enter)
             widget.bind("<Leave>", on_leave)

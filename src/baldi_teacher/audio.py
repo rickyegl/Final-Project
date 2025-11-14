@@ -29,8 +29,9 @@ FUNCTION_SOUND_MAP: Dict[str, str] = {
 class AudioManager:
     """Centralised helper for playing Baldi sound effects."""
 
-    def __init__(self, assets_dir: Path) -> None:
+    def __init__(self, assets_dir: Path, character_audio_subdir: str = "") -> None:
         self._assets_dir = assets_dir
+        self._character_audio_subdir = character_audio_subdir
         self._lock = threading.Lock()
 
     def play_event(self, sound_key: str, *, blocking: bool = False) -> dict[str, str]:
@@ -54,7 +55,16 @@ class AudioManager:
         return self.play_event(sound_key)
 
     def _play_file(self, filename: str, *, blocking: bool) -> dict[str, str]:
-        path = self._assets_dir / filename
+        # Try character-specific audio first, fall back to root assets
+        if self._character_audio_subdir:
+            char_path = self._assets_dir / self._character_audio_subdir / filename
+            if char_path.exists():
+                path = char_path
+            else:
+                path = self._assets_dir / filename
+        else:
+            path = self._assets_dir / filename
+
         if not path.exists():
             return {
                 "status": "error",

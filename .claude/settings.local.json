@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(for char in lebron_james steve villager)",
+      "Bash(do for sound in great_job mad_sounds wrong)",
+      "Bash(do touch \"$char/$sound.wav\")",
+      "Bash(done)",
+      "Bash(python:*)",
+      "Bash(tree:*)",
+      "Bash(dir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

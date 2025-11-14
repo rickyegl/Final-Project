@@ -11,7 +11,9 @@ from .gemini_client import GeminiChatClient
 from .prompting import BALDI_PERSONA_PROMPT
 from .teacher_bot import TeacherBot
 from .gui_view import BaldiTeacherView
-from .audio import get_audio_manager
+from .audio import get_audio_manager, AudioManager
+from .characters import get_default_character, CharacterConfig
+from .character_selector import show_character_selector
 
 
 READY_STATUS = "Ready for the next question."
@@ -23,7 +25,19 @@ ERROR_STATUS = "Something went wrong. Try again?"
 def run_gui(argv: Optional[Iterable[str]] = None) -> None:
     args = _parse_args(argv)
     config = _build_config(args)
+
+    # Initialize with default character (Baldi)
+    current_character = get_default_character()
     persona = _load_persona(args.persona)
+
+    # Initialize audio manager with character audio directory
+    assets_root = Path(__file__).resolve().parents[2] / "assets"
+    from .audio import _AUDIO_MANAGER, AudioManager
+    if _AUDIO_MANAGER is None:
+        # Create audio manager with character-specific audio directory
+        import sys
+        audio_manager = AudioManager(assets_root, current_character.audio_dir)
+        sys.modules['baldi_teacher.audio']._AUDIO_MANAGER = audio_manager
 
     client = GeminiChatClient(config, system_instruction=persona)
     bot = TeacherBot(config, client)
@@ -36,6 +50,8 @@ def run_gui(argv: Optional[Iterable[str]] = None) -> None:
         bot=bot,
         view=view,
         intro_question=args.intro,
+        config=config,
+        current_character=current_character,
     )
     controller.run()
 
@@ -88,13 +104,13 @@ def _parse_args(argv: Optional[Iterable[str]]) -> argparse.Namespace:
     parser.add_argument(
         "--avatar-image",
         type=Path,
-        default=Path("assets/baldi.webp"),
+        default=Path("assets/characters/baldi/character.webp"),
         help="Path to Baldi's avatar image displayed in the window.",
     )
     parser.add_argument(
         "--thinking-image",
         type=Path,
-        default=Path("assets/thinking.png"),
+        default=Path("assets/characters/baldi/thinking.png"),
         help="Optional alternate image to show while Baldi is thinking.",
     )
     return parser.parse_args(list(argv) if argv is not None else None)
@@ -132,6 +148,8 @@ class BaldiTeacherController:
         bot: TeacherBot,
         view: BaldiTeacherView,
         intro_question: Optional[str],
+        config: AppConfig,
+        current_character: CharacterConfig,
     ) -> None:
         self._bot = bot
         self._view = view
@@ -139,11 +157,14 @@ class BaldiTeacherController:
         self._is_pending = False
         self._closing = False
         self._audio = get_audio_manager()
+        self._config = config
+        self._current_character = current_character
 
     def run(self) -> None:
         self._audio.play_event("app_start")
         self._view.set_on_send(self._handle_send)
         self._view.set_on_close(self._handle_close)
+        self._view.set_on_character_select(self._handle_character_select)
         self._view.update_status(READY_STATUS)
         self._view.set_pending_state(False)
 
@@ -172,6 +193,48 @@ class BaldiTeacherController:
         self._closing = True
         self._audio.play_event("window_close", blocking=True)
         return True
+
+    def _handle_character_select(self) -> None:
+        """Open character selection dialog."""
+        if self._is_pending:
+            return  # Don't allow character switching during pending operations
+
+        def on_select(character: CharacterConfig) -> None:
+            self._switch_character(character)
+
+        show_character_selector(
+            self._view._root,
+            on_select,
+            self._current_character.id
+        )
+
+    def _switch_character(self, character: CharacterConfig) -> None:
+        """Switch to a new character persona."""
+        if character.id == self._current_character.id:
+            return  # No change needed
+
+        self._current_character = character
+
+        # Update audio manager with new character audio directory
+        assets_root = Path(__file__).resolve().parents[2] / "assets"
+        global _AUDIO_MANAGER
+        from .audio import _AUDIO_MANAGER
+        self._audio = AudioManager(assets_root, character.audio_dir)
+        # Update the global audio manager
+        import sys
+        sys.modules[__name__]._audio = self._audio
+
+        # Create new bot with updated character persona
+        client = GeminiChatClient(self._config, system_instruction=character.persona_prompt)
+        self._bot = TeacherBot(self._config, client)
+
+        # Update view with new character assets
+        avatar_path = assets_root / character.avatar_path
+        thinking_path = assets_root / character.thinking_path if character.thinking_path else None
+        self._view.update_character(character.name, avatar_path, thinking_path)
+
+        # Show system message about character change
+        self._view.show_system_message(f"Switched to {character.name}! {character.description}")
 
     # Conversation orchestration ------------------------------------------------
     def _submit_intro(self, question: str) -> None:

@@ -11,9 +11,12 @@ from typing import Callable, Optional
 from PIL import Image, ImageDraw, ImageFilter, ImageTk
 
 
-BOLD_PATTERN = re.compile(r"\*\*(.+?)\*\*")
-MATH_BOLD_PATTERN = re.compile(r"\\mathbf\{([^{}]+)\}")
-MATH_CMD_PATTERN = re.compile(r"\\([a-zA-Z]+)")
+BOLD_PATTERN = re.compile(r"\*(.+?)\*") # Look for single asterisks
+# --- REMOVED ---
+# The old math regex patterns are no longer needed,
+# as we are not parsing the math content itself.
+# MATH_BOLD_PATTERN = re.compile(r"\\mathbf\{([^{}]+)\}")
+# MATH_CMD_PATTERN = re.compile(r"\\([a-zA-Z]+)")
 
 
 class BaldiGUITheme:
@@ -155,7 +158,9 @@ class BaldiGUITheme:
             spacing3=6,
         )
 
+        # This will just style the raw LaTeX text
         widget.tag_configure("math", font=math_font, foreground="#0284c7")
+        # We leave math_bold in case you want to manually parse `\mathbf` later
         widget.tag_configure("math_bold", font=math_bold_font, foreground="#0284c7")
         widget.tag_configure(
             "math_block",
@@ -190,6 +195,7 @@ class BaldiTeacherView:
         self._is_pending = False
         self._on_send: Optional[Callable[[str], bool]] = None
         self._on_close: Optional[Callable[[], bool | None]] = None
+        self._on_character_select: Optional[Callable[[], None]] = None
 
         self._avatar_path = avatar_path
         self._thinking_path = thinking_path
@@ -220,6 +226,9 @@ class BaldiTeacherView:
 
     def set_on_close(self, callback: Callable[[], bool | None]) -> None:
         self._on_close = callback
+
+    def set_on_character_select(self, callback: Callable[[], None]) -> None:
+        self._on_character_select = callback
 
     def set_on_bookshelf_change(
         self, callback: Callable[[tuple[Path, ...]], None]
@@ -258,6 +267,30 @@ class BaldiTeacherView:
 
     def show_system_message(self, text: str) -> None:
         self._append_message("System", text, ("label_system", "text_system"))
+
+    def update_character(self, character_name: str, avatar_path: Path, thinking_path: Optional[Path]) -> None:
+        """Update the character avatar and name."""
+        self._avatar_path = avatar_path
+        self._thinking_path = thinking_path
+
+        # Reload avatar images
+        self._avatar_image_default = self._create_photo_image(self._avatar_path)
+        if self._thinking_path is not None:
+            self._avatar_image_thinking = self._create_photo_image(self._thinking_path)
+        else:
+            self._avatar_image_thinking = None
+
+        # Update the displayed avatar
+        self._update_avatar_state()
+
+        # Update window title
+        self._root.title(f"{character_name}'s Notebook of Knowledge")
+
+        # Update title text
+        self._title_text_ready = f"{character_name} is ready to help!\nAsk anything, but write neatly!"
+        self._title_text_thinking = f"{character_name} is thinking...\nGive them a moment to respond!"
+        if self._title_label:
+            self._title_label.configure(text=self._title_text_ready if not self._is_pending else self._title_text_thinking)
 
     # Internal helpers -----------------------------------------------------------
     def _build_ui(self) -> None:
@@ -545,7 +578,7 @@ class BaldiTeacherView:
     def _notify_bookshelf_change(self) -> None:
         if self._on_bookshelf_change is None:
             return
-        self._on_bookshelf_change(tuple(self._bookshelf_files))
+        self._on_booksfhelf_change(tuple(self._bookshelf_files))
 
     def _format_bookshelf_display(self, path: Path) -> str:
         try:
@@ -589,13 +622,20 @@ class BaldiTeacherView:
             anchor="center",
             justify="center",
             style="GlassAvatar.TLabel",
+            cursor="hand2",
         )
         self._avatar_label.pack()
+        self._avatar_label.bind("<Button-1>", self._handle_avatar_click)
 
         self._avatar_image_default = self._create_photo_image(self._avatar_path)
         if self._thinking_path is not None:
             self._avatar_image_thinking = self._create_photo_image(self._thinking_path)
         self._update_avatar_state()
+
+    def _handle_avatar_click(self, event=None) -> None:
+        """Handle avatar click to open character selector."""
+        if self._on_character_select:
+            self._on_character_select()
 
     def _append_message(self, speaker: str, text: str, tags: tuple[str, str]) -> None:
         label_tag, text_tag = tags
@@ -623,6 +663,7 @@ class BaldiTeacherView:
                 continue
 
             if stripped.startswith("$$") and stripped.endswith("$$") and len(stripped) > 4:
+                # We pass the raw text, *without* the $$ delimiters
                 self._insert_math_block(stripped[2:-2].strip(), base_tag)
                 continue
 
@@ -662,6 +703,7 @@ class BaldiTeacherView:
             if not segment:
                 continue
             if is_math:
+                # We pass the raw math segment (e.g., "x^2 + \frac{a}{b}")
                 self._insert_math_inline(segment, base_tag, extra_tags)
             else:
                 self._insert_bold_text(segment, base_tag, extra_tags)
@@ -678,6 +720,7 @@ class BaldiTeacherView:
                     if buffer:
                         segments.append((False, "".join(buffer)))
                         buffer.clear()
+                    # We store the content *without* the $$
                     segments.append((True, text[i + 2 : end]))
                     i = end + 2
                     continue
@@ -687,6 +730,7 @@ class BaldiTeacherView:
                     if buffer:
                         segments.append((False, "".join(buffer)))
                         buffer.clear()
+                    # We store the content *without* the $
                     segments.append((True, text[i + 1 : end]))
                     i = end + 1
                     continue
@@ -726,40 +770,34 @@ class BaldiTeacherView:
                 (base_tag,) + extra_tags,
             )
 
+    # --- MODIFIED ---
+    # This function is now greatly simplified.
+    # It no longer tries to parse or sanitize the math.
+    # It just inserts the raw text with the 'math' tag.
     def _insert_math_inline(
         self,
         text: str,
         base_tag: str,
         extra_tags: tuple[str, ...],
     ) -> None:
-        cursor = 0
-        for match in MATH_BOLD_PATTERN.finditer(text):
-            prefix = text[cursor:match.start()]
-            if prefix:
-                sanitized_prefix = self._sanitize_math_text(prefix)
-                if sanitized_prefix:
-                    self._conversation.insert(
-                        "end",
-                        sanitized_prefix,
-                        (base_tag, "math") + extra_tags,
-                    )
-            bold_text = self._sanitize_math_text(match.group(1))
-            if bold_text:
-                self._conversation.insert(
-                    "end",
-                    bold_text,
-                    (base_tag, "math", "math_bold") + extra_tags,
-                )
-            cursor = match.end()
-        remainder = text[cursor:]
-        if remainder:
-            sanitized_remainder = self._sanitize_math_text(remainder)
-            if sanitized_remainder:
-                self._conversation.insert(
-                    "end",
-                    sanitized_remainder,
-                    (base_tag, "math") + extra_tags,
-                )
+        """
+        Inserts the raw, unmodified LaTeX string with the math style.
+        This will not render the math, but will display the LaTeX code
+        in the styled (italic, blue) font without destroying it.
+        """
+        if text:
+            # We add the '$' back for display, since _split_math_segments
+            # removed them. This makes it clear it's a math segment.
+            # We don't add $$ for block, as the block tag handles centering.
+            
+            # is_block = "math_block" in extra_tags # No longer needed
+            # display_text = text if is_block else f"${text}$" # This was the incorrect part
+
+            self._conversation.insert(
+                "end",
+                text, # Just insert the raw text (e.g., "e" or "x^2")
+                (base_tag, "math") + extra_tags,
+            )
 
     def _insert_math_block(self, text: str, base_tag: str) -> None:
         if self._conversation.index("end-1c") != "1.0":
@@ -769,15 +807,19 @@ class BaldiTeacherView:
                 previous_char = ""
             if previous_char and previous_char != "\n":
                 self._conversation.insert("end", "\n")
+        
+        # We now pass the raw text to _insert_math_inline
+        # which will apply the 'math_block' tag.
         self._insert_math_inline(text, base_tag, ("math_block",))
 
-    def _sanitize_math_text(self, text: str) -> str:
-        cleaned = text.replace(r"\,", " ")
-        cleaned = cleaned.replace(r"\ ", " ")
-        cleaned = cleaned.replace(r"\-", "-")
-        cleaned = MATH_CMD_PATTERN.sub(r"\1", cleaned)
-        cleaned = cleaned.replace("{", "").replace("}", "")
-        return cleaned
+    # --- REMOVED ---
+    # This function was the source of the problem. It was destroying
+    # the LaTeX. It is no longer needed.
+    #
+    # def _sanitize_math_text(self, text: str) -> str:
+    #     cleaned = text.replace(r"\,", " ")
+    #     ...
+    #     return cleaned
 
     def _handle_window_resize(self, event: tk.Event) -> None:
         if event.widget is self._root:

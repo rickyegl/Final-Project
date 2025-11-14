@@ -1,0 +1,11 @@
+Collecting tkinterweb
+  Downloading tkinterweb-4.8.1-py3-none-any.whl.metadata (2.6 kB)
+Requirement already satisfied: pillow in d:\users\rfgar\appdata\local\programs\python\python312\lib\site-packages (from tkinterweb) (10.2.0)
+Collecting tkinterweb-tkhtml>=2.0.0 (from tkinterweb)
+  Downloading tkinterweb_tkhtml-2.0.0-py3-none-win_amd64.whl.metadata (1.1 kB)
+Downloading tkinterweb-4.8.1-py3-none-any.whl (170 kB)
+   ---------------------------------------- 170.8/170.8 kB 2.1 MB/s eta 0:00:00
+Downloading tkinterweb_tkhtml-2.0.0-py3-none-win_amd64.whl (1.6 MB)
+   ---------------------------------------- 1.6/1.6 MB 10.4 MB/s eta 0:00:00
+Installing collected packages: tkinterweb-tkhtml, tkinterweb
+Successfully installed tkinterweb-4.8.1 tkinterweb-tkhtml-2.0.0

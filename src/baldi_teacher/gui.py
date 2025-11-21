@@ -23,6 +23,7 @@ ERROR_STATUS = "Something went wrong. Try again?"
 
 
 def run_gui(argv: Optional[Iterable[str]] = None) -> None:
+    """Initialize and launch the GUI application with character selection and audio support."""
     args = _parse_args(argv)
     config = _build_config(args)
 
@@ -161,6 +162,7 @@ class BaldiTeacherController:
         self._current_character = current_character
 
     def run(self) -> None:
+        """Start the GUI event loop and handle initial setup like intro question."""
         self._audio.play_event("app_start")
         self._view.set_on_send(self._handle_send)
         self._view.set_on_close(self._handle_close)
@@ -216,7 +218,7 @@ class BaldiTeacherController:
         )
 
     def _switch_character(self, character: CharacterConfig) -> None:
-        """Switch to a new character persona."""
+        """Switch to a new character by updating audio, bot persona, and UI assets."""
         if character.id == self._current_character.id:
             return  # No change needed
 
@@ -258,6 +260,7 @@ class BaldiTeacherController:
         ).start()
 
     def _generate_reply(self, text: str, bookshelf_files: tuple[Path, ...]) -> None:
+        """Request AI response in background thread and handle success or error."""
         try:
             reply = self._bot.ask(text, bookshelf_files=bookshelf_files)
         except Exception as exc:

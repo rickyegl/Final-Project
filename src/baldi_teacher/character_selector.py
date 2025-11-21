@@ -91,7 +91,7 @@ class CharacterSelectorDialog:
     def _load_character_image(
         self, parent: tk.Frame, character: CharacterConfig, card_bg: str
     ) -> tk.Label:
-        """Load and display the character's thinking image."""
+        """Load character's thinking image, trying both .png and .webp extensions."""
         # Get the path to the thinking image, try both .png and .webp
         assets_dir = Path(__file__).parent.parent.parent / "assets"
         base_path = assets_dir / character.thinking_path
@@ -152,7 +152,7 @@ class CharacterSelectorDialog:
     def _create_character_card(
         self, parent: tk.Frame, character: CharacterConfig
     ) -> tk.Frame:
-        """Create a single character selection card."""
+        """Build interactive character card with hover effects and click handler."""
         # Card frame with dark background
         card_bg = "#334155"
         card_hover_bg = "#475569"
@@ -252,13 +252,7 @@ def show_character_selector(
     on_select: Callable[[CharacterConfig], None],
     current_character_id: str = "baldi",
 ) -> None:
-    """Show the character selection dialog.
-
-    Args:
-        parent: Parent window
-        on_select: Callback function called when a character is selected
-        current_character_id: ID of the currently selected character
-    """
+    """Display modal dialog for character selection and invoke callback when chosen."""
     dialog = CharacterSelectorDialog(parent, on_select, current_character_id)
     dialog.show()
 

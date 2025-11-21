@@ -62,6 +62,7 @@ class ImageOverlay:
         self._photo = None  # keep ref to avoid GC
 
     def start(self, timeout: float = 5.0) -> None:
+        """Launch overlay window in background thread and wait for it to be ready."""
         if self._thread is not None:
             return
         if not self._image_path.exists():
@@ -171,6 +172,7 @@ def _calculate_position(
     height: int,
     padding: int,
 ) -> tuple[int, int]:
+    """Calculate window position based on anchor point (e.g., 'sw' for southwest corner)."""
     anchor = anchor.lower()
     if "w" in anchor:
         x = padding
@@ -217,6 +219,7 @@ def _prepare_image(
     transparent: bool,
     chroma_color: str,
 ) -> "Image.Image":
+    """Apply transparency using chroma key color if requested, otherwise return RGBA."""
     if not transparent:
         return image.convert("RGBA")
 

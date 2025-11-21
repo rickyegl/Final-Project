@@ -33,6 +33,7 @@ class TeacherBot:
         *,
         bookshelf_files: Sequence[Path] | None = None,
     ) -> str:
+        """Send a message to the AI and return its response, optionally attaching files."""
         self._append_user(message)
         reply = self._client.generate_reply(
             tuple(self._history),

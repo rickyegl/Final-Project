@@ -35,7 +35,7 @@ class AudioManager:
         self._lock = threading.Lock()
 
     def play_event(self, sound_key: str, *, blocking: bool = False) -> dict[str, str]:
-        """Play a named sound event and return metadata for logging/tool feedback."""
+        """Play a named sound event, checking character-specific audio first, then falling back to default."""
         filename = SOUND_FILES.get(sound_key)
         if filename is None:
             return {
@@ -45,7 +45,7 @@ class AudioManager:
         return self._play_file(filename, blocking=blocking)
 
     def handle_function_call(self, function_name: str) -> dict[str, str]:
-        """Play the audio mapped from a Gemini function call."""
+        """Map Gemini function call name to sound key and play corresponding audio."""
         sound_key = FUNCTION_SOUND_MAP.get(function_name)
         if sound_key is None:
             return {

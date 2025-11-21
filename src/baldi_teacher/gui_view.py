@@ -22,6 +22,7 @@ class BaldiGUITheme:
         self._fonts: dict[str, tkfont.Font] = {}
 
     def apply(self, root: tk.Misc) -> ttk.Style:
+        """Configure ttk theme with glass-style colors and modern typography."""
         style = ttk.Style(root)
         style.theme_use("clam")
 
@@ -295,7 +296,7 @@ class BaldiTeacherView:
         self._append_message("System", text, "system")
 
     def update_character(self, character_name: str, avatar_path: Path, thinking_path: Optional[Path]) -> None:
-        """Update the character avatar and name."""
+        """Reload avatar images and update all UI elements to reflect new character."""
         self._character_name = character_name  # Store the character name
         self._avatar_path = avatar_path
         self._thinking_path = thinking_path
@@ -537,7 +538,7 @@ class BaldiTeacherView:
         self._input_box.focus_set()
 
     def _init_conversation_html(self) -> None:
-        """Initialize the conversation with base HTML structure including MathJax."""
+        """Load base HTML template with MathJax support for rendering mathematical notation."""
         base_html = f"""
         <!DOCTYPE html>
         <html>
@@ -714,7 +715,7 @@ class BaldiTeacherView:
         """
 
     def _text_to_html(self, text: str, message_type: str) -> str:
-        """Convert markdown-like text to HTML with LaTeX support."""
+        """Parse markdown-style text into HTML, handling headings, bullets, and math expressions."""
         lines = text.splitlines()
         if not lines:
             return ""
@@ -768,7 +769,7 @@ class BaldiTeacherView:
         return "\n".join(html_parts)
 
     def _process_inline_formatting(self, text: str) -> str:
-        """Process inline formatting including bold and inline math."""
+        """Convert inline formatting to HTML, wrapping math expressions in MathJax delimiters."""
         result_parts = []
 
         # Split by math segments first
@@ -799,7 +800,7 @@ class BaldiTeacherView:
         return "".join(result_parts)
 
     def _split_math_segments(self, text: str) -> list[tuple[bool, str]]:
-        """Split text into math and non-math segments."""
+        """Parse text to identify math expressions delimited by $...$ or \\(...\\) for separate processing."""
         segments: list[tuple[bool, str]] = []
         buffer: list[str] = []
         i = 0
@@ -899,6 +900,7 @@ class BaldiTeacherView:
         self._background_label.configure(image=self._background_photo)
 
     def _create_glass_background(self, width: int, height: int) -> Image.Image:
+        """Generate gradient background with blurred overlay shapes for glassmorphic effect."""
         height = max(height, 1)
         gradient = Image.new("RGB", (1, height))
         draw = ImageDraw.Draw(gradient)

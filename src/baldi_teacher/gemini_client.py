@@ -84,6 +84,7 @@ class GeminiChatClient:
         *,
         attachments: Sequence[Path] = (),
     ) -> str:
+        """Generate AI response from message history, handling tool calls and file attachments."""
         glm = self._glm
         contents = [message.as_gemini_content() for message in messages]
         if attachments:
@@ -172,6 +173,7 @@ class GeminiChatClient:
         self,
         path: Path,
     ) -> tuple[object, str]:
+        """Convert a PDF or text file into a Gemini content part with label."""
         glm = self._glm
         if not path.exists():
             raise FileNotFoundError("File does not exist.")
